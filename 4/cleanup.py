@@ -6,7 +6,7 @@ ranges = [[[int(rng) for rng in rangeStr.split('-')] for rangeStr in l.split(','
 def contains(r1, r2):
     return r1[0] <= r2[0] and r1[1] >= r2[1]
 
-# CHecks whether r1 overlaps with r2
+# Checks whether r1 overlaps with r2
 def overlap(r1, r2):
     return r1[0] <= r2[0] and r1[1] >= r2[0]
 
