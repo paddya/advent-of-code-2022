@@ -100,7 +100,7 @@ nonZeroValves.sort(key=cmp_to_key(sortValves))
 
 numNonZeroValves = len(nonZeroValves)
 
-BEST = dict()
+
 
 def findPossibleMoves(state):
     state : State
@@ -113,6 +113,7 @@ def findPossibleMoves(state):
         return []
     
     states = []
+    
     
     # Consider all the non-open valves and jump directly to them
     # Me and elephant don't move in tandem, so we need to handle state transitions independently
@@ -161,39 +162,38 @@ def upperBound(state):
     
     return potential
 
-curMax = 0
 
-Q = []
-initialState = State('AA', 'AA', set(), 26, 26, 0, set(nonZeroValves))
-heapq.heappush(Q, (0, initialState))
-i = 0
-maxElem = None
-while Q:
-    state : State
-    pot, state = heapq.heappop(Q)
-    
-    if -pot < curMax:
-       continue
+for minutes in [(30, 0), (26, 26)]:
+    m1, m2 = minutes
+    curMax = 0
 
-    i += 1
-     
-    if state.total > curMax:
-        curMax = state.total
-        maxElem = state
+    Q = []
+    BEST = dict()
+    initialState = State('AA', 'AA', set(), m1, m2, 0, set(nonZeroValves))
+    heapq.heappush(Q, (0, initialState))
+    i = 0
+    while Q:
+        state : State
+        pot, state = heapq.heappop(Q)
         
-    curMax = max([curMax, state.total])
-    
-    
-    newStates = findPossibleMoves(state)
+        if -pot < curMax:
+            continue
 
-    
-    for ns in newStates:
-        if not ns in visited:
-            potential = upperBound(ns)
-            if potential > curMax:
-                visited.add(ns)
+        i += 1
+        
+        if state.total > curMax:
+            curMax = state.total
+            
+        curMax = max([curMax, state.total])
+        
+        newStates = findPossibleMoves(state)
+        
+        for ns in newStates:
+            if not ns in visited:
+                potential = upperBound(ns)
+                if potential > curMax:
+                    visited.add(ns)
 
-                heapq.heappush(Q, (-potential, ns))
+                    heapq.heappush(Q, (-potential, ns))
 
-print(curMax)
-print(maxElem)
+    print(curMax)
