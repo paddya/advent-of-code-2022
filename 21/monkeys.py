@@ -102,14 +102,12 @@ nodes['humn'].value = VarRef()
 # Idea: for each node, only one subtree can actually contain a variable
 # So we always look at root.left or root.right and their subtrees
 # The subtree without the variable can be moved to the other side by adding
-# a new node on the other side with the inverted operation
+# a new node on the other side with the inverted operation (+ edge cases for minuends + dividends)
 
 inversionMap = {'+': '-', '-': '+', '*': '/', '/': '*'}
 
 withVar, withoutVar = root.subtreeByVar()
-print('Should match', withoutVar.compute())
 
-print(root.print())
 while True:
     
     # Do this in every iteration since the children actually change every round
@@ -121,57 +119,29 @@ while True:
     #print(withVar)
     #print(shouldMove)
     
-    newOp = ''
-    newNode = None
+    oldOp = withVar.op
     
-    movingPartIsRightChild = True if withVar.right == shouldMove else False
+    # We have two special cases: when moving a dividend or a minuend:
+    # A/x = B <=> 1/x = B/A <=> x = A/B
+    # A-x = B <=> -x = B-A <=> x = A-B
     
-    if withVar.op != "/" and withVar.op != "-" or movingPartIsRightChild:
-        newOp = inversionMap[withVar.op]
-        newNode = Node('moving ' + str(shouldMove) + ' with new op ' + newOp)
-        newNode.left = withoutVar
-        newNode.right = shouldMove
-        newNode.op = newOp
-        
-        if withoutVar == root.left:
-            root.left = newNode
-            root.right = shouldRemain
-        else:
-            root.right = newNode
-            root.left = shouldRemain
+    # In this case, we keep the old operation from the moving side
+    # but invert the assignment of the nodes after moving the node over
+    movingPartIsLeftChild = withVar.left == shouldMove
+    invertedLogic = (oldOp == "/" or oldOp == "-") and movingPartIsLeftChild
+
+    newOp = inversionMap[oldOp] if not invertedLogic else oldOp
+    newNode = Node('moving ' + str(shouldMove) + ' with new op ' + newOp)
+    newNode.left = withoutVar if not invertedLogic else shouldMove
+    newNode.right = shouldMove if not invertedLogic else withoutVar
+    newNode.op = newOp
+    
+    if withoutVar == root.left:
+        root.left = newNode
+        root.right = shouldRemain
     else:
-        # We only have to handle the cases where we have to move the dividend
-        if withVar.op == '/':
-            # A/x = B => 1/x = B/A => x = A/B
-            newNode = Node('moving ' + str(shouldMove) + ' with new op /')
-            newNode.right = withoutVar
-            newNode.left = shouldMove
-            newNode.op = '/'
-            
-            if withoutVar == root.left:
-                root.left = newNode
-                root.right = shouldRemain
-            else:
-                root.right = newNode
-                root.left = shouldRemain
-        elif withVar.op == '-':
-            # A-x = B => -x = B-A => x = A-B
-            newNode = Node('moving ' + str(shouldMove) + ' with new op /')
-            newNode.right = withoutVar
-            newNode.left = shouldMove
-            newNode.op = '-'
-            
-            if withoutVar == root.left:
-                root.left = newNode
-                root.right = shouldRemain
-            else:
-                root.right = newNode
-                root.left = shouldRemain
-
-    #print('moving', shouldMove, 'with new op', newOp)
-
-
-    print(root.print())
+        root.right = newNode
+        root.left = shouldRemain
     
     # If the only node left on either side is the variable, we are done
     if root.left.name == 'humn' or root.right.name == 'humn':
