@@ -1,6 +1,5 @@
 from __future__ import annotations
-from collections import defaultdict
-from heapq import merge
+from collections import defaultdict, deque
 import sys
 
 lines = open(sys.argv[1]).read().split('\n')
@@ -121,12 +120,12 @@ GRID_CACHE_Y[0] = GY
 
 # Implements a breadth-first search over the state space
 def search(initialState, endPos):
-    Q = [initialState]
+    Q = deque([initialState])
     visited = set()
     bestState = None
 
     while Q:
-        pos, round = state = Q.pop(0)     
+        pos, round = state = Q.popleft()   
 
         if pos == endPos:
             bestState = state
