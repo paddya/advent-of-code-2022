@@ -1,24 +1,29 @@
 from __future__ import annotations
 from collections import defaultdict
+from heapq import merge
 import sys
-import math
 
 lines = open(sys.argv[1]).read().split('\n')
 
 HEIGHT = len(lines)
 WIDTH = len(lines[0])
 
-NUM_WRAP = math.lcm(HEIGHT - 2, WIDTH - 2)
-
-G = defaultdict(list)
+# Store horizontal and vertical blizzards in separate sets
+# because each axis repeats faster than the whole grid 
+# which takes LCM(WIDTH-2, HEIGHT-2) iterations
+GX = defaultdict(list)
+GY = defaultdict(list)
 
 for r, line in enumerate(lines):
     for c, char in enumerate(line):
         if r == 0 or c == 0 or r == HEIGHT - 1 or c == WIDTH - 1:
             continue
         if char != '.':
-            G[(r, c)].append(char)
-        
+            if char == '>' or char == '<':
+                GX[(r, c)].append(char)
+            else:
+                GY[(r, c)].append(char)
+                    
 def printGrid(G, curPos=None):
     for y in range(HEIGHT):
         for x in range(WIDTH):
@@ -80,16 +85,16 @@ def iterateGrid(G):
 START_POSITION = (0, 1)
 END_POSITION = (HEIGHT-1, WIDTH-2)
 
-# Next step: Dijkstra, state can just be the current position and the round number % least_common_multiple(WIDTH, HEIGHT) since the rounds repeat after that
 
 allMoves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-# Gets the current position and the grid for the next round, moves if the cell is empty
-def findPossibleMoves(curState, G, endPos):
+# Computes all possible moves from a given state and
+# future grid
+def findPossibleMoves(curState, GX, GY, endPos):
     states = []
     curPos, round = curState
-    # First idea, do nothing if possible and if we are not in the start position (we assume we can move in the first round...)
-    if curPos not in G:
+    # Do nothing if there is no blizzard in the current spot in the next round
+    if curPos not in GX and curPos not in GY:
         states.append((curPos, (round+1)))
     
     # Try moves in all directions
@@ -99,7 +104,7 @@ def findPossibleMoves(curState, G, endPos):
         # Skip wall positions
         if newPos != endPos and (r <= 0 or c <= 0 or r >= HEIGHT - 1 or c >= WIDTH - 1):
             continue
-        if newPos not in G:
+        if newPos not in GX and newPos not in GY:
             states.append((newPos, (round+1)))
 
     return states
@@ -108,42 +113,48 @@ def dist(t1, t2):
     return abs(t1[0]-t2[0]) + abs(t1[1]-t2[1])
 
 
+GRID_CACHE_X = dict()
+GRID_CACHE_X[0] = GX
 
+GRID_CACHE_Y = dict()
+GRID_CACHE_Y[0] = GY
 
-
-GRID_CACHE = dict()
-GRID_CACHE[0] = G
-
+# Implements a breadth-first search over the state space
 def search(initialState, endPos):
     Q = [initialState]
     visited = set()
     bestState = None
 
     while Q:
-        state = Q.pop(0)
-        
-        pos, round = state
-        modRound = round % NUM_WRAP
-        
+        pos, round = state = Q.pop(0)     
+
         if pos == endPos:
             bestState = state
             break
-        
-        G = GRID_CACHE[modRound]
-        
 
-        # We cache the grid because it repeats after a few rounds
-        if modRound+1 in GRID_CACHE:
-            G = GRID_CACHE[modRound+1]
+        # Compute the current grid state by either looking it up
+        # from the cache or by iterating the grid from the last round
+        roundX = round % (WIDTH - 2)
+        roundY = round % (HEIGHT -2)
+        
+        GX = GRID_CACHE_X[roundX]
+        GY = GRID_CACHE_Y[roundY]
+
+        if roundX+1 in GRID_CACHE_X:
+            GX = GRID_CACHE_X[roundX+1]
         else:    
-            G = iterateGrid(GRID_CACHE[modRound])
-            GRID_CACHE[modRound+1] = G
-
-        # print('\nNew grid for minute', round+1)
-        # printGrid(G)
-        newStates = findPossibleMoves(state, G, endPos)
-        
+            GX = iterateGrid(GRID_CACHE_X[roundX])
+            GRID_CACHE_X[roundX+1] = GX
             
+        if roundY+1 in GRID_CACHE_Y:
+            GY = GRID_CACHE_Y[roundY+1]
+        else:    
+            GY = iterateGrid(GRID_CACHE_Y[roundY])
+            GRID_CACHE_Y[roundY+1] = GY
+
+
+        newStates = findPossibleMoves(state, GX, GY, endPos)
+                    
         for ns in newStates:
             if not ns in visited:
                 #print('Queuing state', ns, 'from', state)
