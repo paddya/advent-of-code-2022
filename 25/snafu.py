@@ -30,21 +30,18 @@ for i in range(100):
     EXMAX[i] = exclusiveMax(i)
 
 def toSnafu(num):
-    maxExponent = 0
+    curExp = 0
     
-    # Compute the maximum exponent required
+    # Compute the maximum exponent required first
     while True:
-        localMax = EXMAX[maxExponent]
+        localMax = EXMAX[curExp]
         # The previous exponent was good enough, since we are now over
         if localMax >= abs(num):
-            maxExponent = maxExponent - 1
+            curExp = curExp - 1
             break
-        maxExponent += 1
+        curExp += 1
         
-    curExp = maxExponent
-    
-
-    
+        
     mapping = {
         -2: '=',
         -1: '-',
@@ -67,8 +64,7 @@ def toSnafu(num):
         if rem < 0:
             digit *= -1
         rem = rem - digit*5**curExp
-        print(digit, d, r, rem)
-        assert digit == d and r == rem
+        
         digits.append(mapping[digit])
         curExp -= 1
         
